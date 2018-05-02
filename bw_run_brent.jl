@@ -1,4 +1,5 @@
 #run brent small
+include("brent.jl")
 
 N = 5000
 half = round(Int64, N/2)

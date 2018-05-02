@@ -11,7 +11,7 @@ function cv(isi)
   return SD/mean(isi)
 end
 
-function Brent_W(N, p)
+function Brent_W(N, p, Jee, Jie, Jei, Jii)
 
   half = round(Int64, N/2)
   sn = sqrt(N)
@@ -20,6 +20,13 @@ function Brent_W(N, p)
 
   Jee = 12.5/sn
   Jie = 20/sn
+  # Jie = 30/sn
+  # Jie = 40/sn
+  # Jie = 50/sn
+  # Jie = 60/sn
+  # Jie = 70/sn
+  # Jie = 100/sn
+  # Jie = 200/sn
   Jei = -50/sn
   Jii = -50/sn
 
@@ -91,12 +98,24 @@ function interpolate_spike(v2, v1, vth)
   return t
 end
 
-function Brent_Network_Local_Euler_CSR(h, total, CSR, W, N, s, vth, tau_m, tau_s)
+function Brent_Network_Euler_CSR_A(h, total, CSR, W, N, s1, s2, vth, tau_m, tau_s, tau_a, g_a)
 
   ntotal = round(Int,total/h)
+  half = round(Int64, N/2)
+  quar = round(Int64, N/4)
+
   V = rand(N)*vth
   V_buff = V
+
   syn = zeros(N)
+  drive = zeros(N)
+  A = zeros(N)
+
+  drive[1:quar] = s1 *h
+  drive[quar+1:half] = s2 *h
+  drive[half+1:half+quar] = (s1 - .1)*h
+  drive[half+quar:N] = (s2 - .1)*h
+  g_h = g_a * h
 
   #raster
   time = Float64[0]
@@ -105,12 +124,14 @@ function Brent_Network_Local_Euler_CSR(h, total, CSR, W, N, s, vth, tau_m, tau_s
   #Calculate drive and leak constants ahead of time
   m_leak = h/tau_m
   s_leak = h/tau_s
+  a_leak = h/tau_a
 
   for iter = 1:ntotal
 
-    V += (h*syn) - (V*m_leak) + s[iter]
+    V .+= drive .+ (h*syn) .- (V*m_leak) .- (g_h*A)
 
-    syn -= (syn*s_leak)
+    syn .-= (syn*s_leak)
+    A .-= (A*a_leak)
 
     #check for spikes
     vs = (V.>vth)
@@ -123,10 +144,11 @@ function Brent_Network_Local_Euler_CSR(h, total, CSR, W, N, s, vth, tau_m, tau_s
         js = spe[j]
         #interpolate spike time
         delta_h = interpolate_spike(V[js], V_buff[js], vth) #time since the spike (units of h)
-        lx = exp(-delta_h*h/tau_m)
+        lx = exp(-delta_h*h/tau_s)
         syn[CSR[js]] += W[CSR[js], js].*lx #modify amplitude of synapse by decay since estimated time of spike
         push!(raster,js)
   	    push!(time,iter-delta_h)
+        A[js] += 1.
       end
     end
 
@@ -147,9 +169,9 @@ function nt_diff(t, r, ntotal, half, netd_binsize)
   for j = 2:length(netd_bins)
     tf = find(netd_bins[j-1] .<= t .< netd_bins[j])
     T = sum(r[tf] .> half)
-    #B = sum(r[tf] .<= half)
-    #NTD = T - B #################Differences in Spikes
-    ntd[j-1] = T
+    B = sum(r[tf] .<= half)
+    NTD = T - B #################Differences in Spikes
+    ntd[j-1] = NTD
     nts[j-1] = length(tf)
     #println(T+B==length(tf))
   end
@@ -284,4 +306,27 @@ function splice_flags(flags, times)
   # tdom = emptiness([250*(i[2]-i[1]) for i in top], sum, 0)
   # tnmz = emptiness([250*(i[2]-i[1]) for i in nmz], sum, 0)
   return top, tdom, bot, bdom, nmz, tnmz
+end
+
+#downsample A so it is the same size as B
+function downsample(A, B)
+  LB = length(B)
+  f = Int64(floor(length(A)/LB))
+  L = Int64(f*LB)
+  A_ = A[1:Int64(L)] #Truncated version of A so B fits into it an even number of times
+  println(length(A_))
+  A_S = zeros(LB) #subsample of A
+  for i = 1:LB-1
+    println(i)
+    A_S[i] = A_[((i-1)*f)+1]
+  end
+  return A_S
+end
+
+function zscore(x)
+    m = mean(x)
+    s = std(x)
+    x1 = x .- m
+    x2 = x1 ./s
+    return x2
 end

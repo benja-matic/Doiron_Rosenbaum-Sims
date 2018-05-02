@@ -20,6 +20,13 @@ function Brent_W(N, p)
 
   Jee = 12.5/sn
   Jie = 20/sn
+  # Jie = 30/sn
+  # Jie = 40/sn
+  # Jie = 50/sn
+  # Jie = 60/sn
+  # Jie = 70/sn
+  # Jie = 100/sn
+  # Jie = 200/sn
   Jei = -50/sn
   Jii = -50/sn
 
@@ -101,8 +108,14 @@ function Brent_Network_Euler_CSR(h, total, CSR, W, N, s1, s2, vth, tau_m, tau_s)
 
   V = rand(N)*vth
   V_buff = V
-  p1 = [1 : quar; half_ : half+quar]
-  p2 = [quar_ : half; half_ + quar : N]
+  # p1 = [1 : quar; half_ : half+quar]
+  # p2 = [quar_ : half; half_ + quar : N]
+  p1 = [1:quar] #pool 1 E
+  p2 = [quar_:half] #pool 2 E
+  p3 = [half_:half+quar] #pool 1 I
+  p4 = [half_+quar:N] #pool 2 I
+  s3 = s1 .- .1 #inhibitory neurons get slightly weaker input
+  s4 = s2 .- .1
   syn = zeros(N)
 
   #raster
@@ -116,8 +129,12 @@ function Brent_Network_Euler_CSR(h, total, CSR, W, N, s1, s2, vth, tau_m, tau_s)
   for iter = 1:ntotal
 
     V += (h*syn) - (V*m_leak)
+    # V[p1] += s1[iter]
+    # V[p2] += s2[iter]
     V[p1] += s1[iter]
     V[p2] += s2[iter]
+    V[p3] += s3[iter]
+    V[p4] += s4[iter]
 
     syn -= (syn*s_leak)
 
@@ -132,7 +149,7 @@ function Brent_Network_Euler_CSR(h, total, CSR, W, N, s1, s2, vth, tau_m, tau_s)
         js = spe[j]
         #interpolate spike time
         delta_h = interpolate_spike(V[js], V_buff[js], vth) #time since the spike (units of h)
-        lx = exp(delta_h/tau_m)
+        lx = exp(-delta_h*h/tau_s)
         syn[CSR[js]] += W[CSR[js], js].*lx #modify amplitude of synapse by decay since estimated time of spike
         push!(raster,js)
   	    push!(time,iter-delta_h)
@@ -156,9 +173,9 @@ function nt_diff(t, r, ntotal, half, netd_binsize)
   for j = 2:length(netd_bins)
     tf = find(netd_bins[j-1] .<= t .< netd_bins[j])
     T = sum(r[tf] .> half)
-    #B = sum(r[tf] .<= half)
-    #NTD = T - B #################Differences in Spikes
-    ntd[j-1] = T
+    B = sum(r[tf] .<= half)
+    NTD = T - B #################Differences in Spikes
+    ntd[j-1] = NTD
     nts[j-1] = length(tf)
     #println(T+B==length(tf))
   end
@@ -293,4 +310,27 @@ function splice_flags(flags, times)
   # tdom = emptiness([250*(i[2]-i[1]) for i in top], sum, 0)
   # tnmz = emptiness([250*(i[2]-i[1]) for i in nmz], sum, 0)
   return top, tdom, bot, bdom, nmz, tnmz
+end
+
+#downsample A so it is the same size as B
+function downsample(A, B)
+  LB = length(B)
+  f = Int64(floor(length(A)/LB))
+  L = Int64(f*LB)
+  A_ = A[1:Int64(L)] #Truncated version of A so B fits into it an even number of times
+  println(length(A_))
+  A_S = zeros(LB) #subsample of A
+  for i = 1:LB-1
+    println(i)
+    A_S[i] = A_[((i-1)*f)+1]
+  end
+  return A_S
+end
+
+function zscore(x)
+    m = mean(x)
+    s = std(x)
+    x1 = x .- m
+    x2 = x1 ./s
+    return x2
 end
