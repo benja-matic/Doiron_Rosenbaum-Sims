@@ -11,52 +11,36 @@ function cv(isi)
   return SD/mean(isi)
 end
 
-function Brent_W(N, p, Jee, Jie, Jei, Jii)
+function Brent_W(N, k, Jee, Jie, Jei, Jii)
 
   half = round(Int64, N/2)
-  sn = sqrt(N)
+  sk = sqrt(k)
   W = zeros(N, N)
-  k = round(Int64, N*p)
 
-  Jee = 12.5/sn
-  Jie = 20/sn
-  # Jie = 30/sn
-  # Jie = 40/sn
-  # Jie = 50/sn
-  # Jie = 60/sn
-  # Jie = 70/sn
-  # Jie = 100/sn
-  # Jie = 200/sn
-  Jei = -50/sn
-  Jii = -50/sn
+  Jee /= sk
+  Jie /= sk
+  Jei /= sk
+  Jii /= sk
 
   #Excitatory Neurons
   for i = 1:half
-    e_inds = rand(1:half, k)
-    i_inds = rand(half+1:N, k)
-    for j in eachindex(e_inds)
-      W[e_inds[j], i] += Jee
-      W[i_inds[j], i] += Jie
+    ee_inds = rand(1:half, k)
+    ei_inds = rand(half+1:N, k)
+    for j in eachindex(ee_inds)
+      W[i, ee_inds[j]] += Jee
+      W[i, ei_inds[j]] += Jei
     end
   end
-
-  #first 10k
-  #within column i, we do 2500 random additions
-  #2500 random inhibitory rows get additions from this e neuron
 
   #Inhibitory Neurons
   for i = half+1:N
-    e_inds = rand(1:half, k)
-    i_inds = rand(half+1:N, k)
-    for j in eachindex(e_inds)
-      W[e_inds[j], i] += Jei
-      W[i_inds[j], i] += Jii
+    ie_inds = rand(1:half, k)
+    ii_inds = rand(half+1:N, k)
+    for j in eachindex(ie_inds)
+      W[i, ie_inds[j]] += Jie
+      W[i, ii_inds[j]] += Jii
     end
   end
-
-  #last 10k
-  #2500 random excitatory rows get additions from this i neuron
-  #within column i we do 2500 random
 
   return W
 end
