@@ -21,33 +21,14 @@ runtime = 10000
 rt = runtime /1000.
 h = 0.1
 
-rot = round(Int64, runtime/h)
-rot2 = rot*2
-
-stdev = .1
-tau_n = 40
-mu = .015
-
-R1 = rand(Normal(0, stdev), rot2)
-R2 = rand(Normal(0, stdev), rot2)
-
-s1 = OU_Model(R1, tau_n, 0.1)
-s2 = OU_Model(R2, tau_n, 0.1)
-
-s1 .+= mu
-s2 .+= mu
-
-s1 = s1[rot:end]
-s2 = s2[rot:end]
-
 Jee = 12.5
 Jie = 20.
 Jei = -50.
 Jii = -50.
 
-vth = 55.
-tau_m = 12.
-tau_s = 6.
+vth = 20.
+tau_m = 20.
+tau_s = 2.
 tau_a = 5000.
 g_a = 3000.0/tau_a
 g_a = 0.
@@ -58,8 +39,8 @@ k = 2500
 BW = Brent_W(N, k, Jee, Jie, Jei, Jii)
 CSR = sparse_rep(BW, N)
 
-# s1 = 2.7
-# s2 = 2.4
+s1 = 2.7
+s2 = 2.4
 
 t, r = Brent_Network_Euler_CSR_A(h, runtime, CSR, BW, N, s1, s1, vth, tau_m, tau_s, tau_a, g_a)
 

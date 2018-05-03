@@ -91,25 +91,18 @@ function Brent_Network_Euler_CSR_A(h, total, CSR, W, N, s1, s2, vth, tau_m, tau_
   half_ = half + 1
   quar_ = quar + 1
 
-  V = (rand(N)*vth) .- 60
+  V = rand(N)*vth
   V_buff = V
 
   syn = zeros(N)
   drive = zeros(N)
   A = zeros(N)
 
-  # drive[1:quar] = s1 *h
-  # drive[quar+1:half] = s2 *h
-  # drive[half+1:half+quar] = (s1 - .1)*h
-  # drive[half+quar:N] = (s2 - .1)*h
+  drive[1:quar] = s1 *h
+  drive[quar+1:half] = s2 *h
+  drive[half+1:half+quar] = (s1 - .1)*h
+  drive[half+quar:N] = (s2 - .1)*h
   g_h = g_a * h
-
-  p1 = [1:quar] #pool 1 E
-  p2 = [quar_:half] #pool 2 E
-  p3 = [half_:half+quar] #pool 1 I
-  p4 = [half_+quar:N] #pool 2 I
-  s3 = s1 .- (h*.005)
-  s4 = s1 .- (h*.005)
 
   #raster
   time = Float64[0]
@@ -122,12 +115,7 @@ function Brent_Network_Euler_CSR_A(h, total, CSR, W, N, s1, s2, vth, tau_m, tau_
 
   for iter = 1:ntotal
 
-    V .+= (h*syn/tau_s) .- (V*m_leak) .- (g_h*A)
-
-    V[p1] += s1[iter]
-    V[p2] += s2[iter]
-    V[p3] += s3[iter]
-    V[p4] += s4[iter]
+    V .+= drive .+ (h*syn) .- (V*m_leak) .- (g_h*A)
 
     syn .-= (syn*s_leak)
     A .-= (A*a_leak)
@@ -152,8 +140,7 @@ function Brent_Network_Euler_CSR_A(h, total, CSR, W, N, s1, s2, vth, tau_m, tau_
     end
 
     #reset after spike
-    # V .-= vth*vs
-    V[vs] = -65.
+    V .-= vth*vs
     V_buff = V
   end
 
