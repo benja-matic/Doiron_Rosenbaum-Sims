@@ -5,48 +5,76 @@ include("c://Users\\cohenbp\\Documents\\Neuroscience\\Balance_Circuits\\two_pool
 using Distributions
 srand(1234)
 
-N = 4000
+# ER1 = []
+# ER2 = []
+# IR1 = []
+# IR2 = []
+# TRE = []
+# TRI = []
+# wta = []
+# for i in [2000, 4000, 8000, 16000, 32000]
+
+N = 20000
 half = div(N,2)
 quar = div(half,2)
 runtime = 10000
 rt = runtime /1000.
 h = 0.1
 
+rot = round(Int64, runtime/h)
+rot2 = rot*2
+
+stdev = .1
+tau_n = 40
+mu = .015
+
+R1 = rand(Normal(0, stdev), rot2)
+R2 = rand(Normal(0, stdev), rot2)
+
+s1 = OU_Model(R1, tau_n, 0.1)
+s2 = OU_Model(R2, tau_n, 0.1)
+
+s1 .+= mu
+s2 .+= mu
+
+s1 = s1[rot:end]
+s2 = s2[rot:end]
+
 Jee = 12.5
 Jie = 20.
 Jei = -50.
 Jii = -50.
 
-vth = 20.
-tau_m = 20.
-tau_s = 2.
+vth = 55.
+tau_m = 12.
+tau_s = 6.
 tau_a = 5000.
 g_a = 3000.0/tau_a
 g_a = 0.
 
 p = 1/8.
-k = 500
+k = 2500
 
 BW = Brent_W(N, k, Jee, Jie, Jei, Jii)
 CSR = sparse_rep(BW, N)
 
-s1 = 2.7
-s2 = 2.4
+# s1 = 2.7
+# s2 = 2.4
 
-# t, r = Brent_Network_Euler_CSR_A(h, runtime, CSR, BW, N, s1, s2, vth, tau_m, tau_s, tau_a, g_a)
-#
-# e_m = find(r .<= half);
-# i_m = find(r .> half);
-# ER = length(e_m)*(1/rt)*(1/half);
-# IR = length(i_m)*(1/rt)*(1/half);
-# te_pt = t[e_m];
-# re_pt = r[e_m];
-# ti_pt = t[i_m];
-# ri_pt = r[i_m];
-#
-# wta_ness, bias = score_analysis(re_pt, half)
-# push!(wta, wta_ness)
-#
+t, r = Brent_Network_Euler_CSR_A(h, runtime, CSR, BW, N, s1, s1, vth, tau_m, tau_s, tau_a, g_a)
+
+e_m = find(r .<= half);
+i_m = find(r .> half);
+ER = length(e_m)*(1/rt)*(1/half);
+IR = length(i_m)*(1/rt)*(1/half);
+te_pt = t[e_m];
+re_pt = r[e_m];
+ti_pt = t[i_m];
+ri_pt = r[i_m];
+
+wta_ness, bias = score_analysis(re_pt, half)
+push!(wta, wta_ness)
+
 # eight = div(quar, 2)
 # plot(t/10000., r, "g.", ms = 1.)
 #
@@ -62,19 +90,37 @@ s2 = 2.4
 # function s2ta(A, k, tau_s)
 #     return A*sqrt(k)*tau_s/1000.
 # end
+
+Wee=s2ta(abs(Jee), k, tau_s)
+Wei=s2ta(abs(Jei), k, tau_s)
+Wie=s2ta(abs(Jie), k, tau_s)
+Wii=s2ta(abs(Jii), k, tau_s)
+
+RE1_2x2, RI1_2x2 = theory_rates_2x2(Wee, Wie, Wei, Wii, max(s1, s2), max(s1, s2)-.1)
+E_R_top = [length(find(re_pt .== i))/rt for i=quar+1:half]
+E_R_bot = [length(find(re_pt .== i))/rt for i=1:quar]
+I_R_top = [length(find(ri_pt .== i))/rt for i=half+1:half+quar]
+I_R_bot = [length(find(ri_pt .== i))/rt for i=half+quar+1:N]
+
+MER1 = mean(E_R_bot)#*(1/1000.)
+MER2 = mean(E_R_top)#*(1/1000.)
+MIR1 = mean(I_R_bot)#*(1/1000.)
+MIR2 = mean(I_R_top)#*(1/1000.)
+
+# push!(ER1, MER1)
+# push!(ER2, MER2)
+# push!(IR1, MIR1)
+# push!(IR2, MIR2)
+# push!(TRE, RE1_2x2)
+# push!(TRI, RI1_2x2)
+
+# end
 #
-# Wee=s2ta(Jee, round(Int64, N*p), 2)
-# Wei=s2ta(Jei, round(Int64, N*p), 2)
-# Wie=s2ta(Jie, round(Int64, N*p), 2)
-# Wii=s2ta(Jii, round(Int64, N*p), 2)
-#
-# RE1_2x2, RI1_2x2 = theory_rates_2x2(Wee, Wie, Wei, Wii, max(s1, s2), max(s1, s2)-.1)
-# E_R_top = [length(find(re_pt .== i))/rt for i=quar+1:half]
-# E_R_bot = [length(find(re_pt .== i))/rt for i=1:quar]
-# I_R_top = [length(find(ri_pt .== i))/rt for i=half+1:half+quar]
-# I_R_bot = [length(find(ri_pt .== i))/rt for i=half+quar+1:N]
-#
-# MER1 = mean(E_R_bot)#*(1/1000.)
-# MER2 = mean(E_R_top)#*(1/1000.)
-# MIR1 = mean(I_R_bot)#*(1/1000.)
-# MIR2 = mean(I_R_top)#*(1/1000.)
+# plot([2000, 4000, 8000, 16000, 32000], ER1, ".", ms = 10., label = "Sim: ER1")
+# plot([2000, 4000, 8000, 16000, 32000], ER2, ".", ms = 10., label = "Sim: ER2")
+# plot([2000, 4000, 8000, 16000, 32000], IR1, ".", ms = 10., label = "Sim: IR1")
+# plot([2000, 4000, 8000, 16000, 32000], IR2, ".", ms = 10., label = "Sim: IR2")
+# plot([2000, 4000, 8000, 16000, 32000], TRE, ".", ms = 10., label = "2x2 theory: ER1")
+# plot([2000, 4000, 8000, 16000, 32000], TRI, ".", ms = 10., label = "2x2 theory: IR1")
+# xlabel("N")
+# ylabel("Rate: Hz")
